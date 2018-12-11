@@ -1,13 +1,20 @@
 import os
 
 
-class Params:
+# class Params:
 
-    BaseDataPath = os.path.join("D:\\", "Studies", "Learn", "101_ObjectCategories")
-    ResizePixelSize = 100
+def getparams():
 
-    LoadFromCache = False
-    CachePath = os.path.join("D:\\", "Studies", "Learn", "CachedData.pkl")
+    params = {
+        "Data": {
+            "BaseDataPath": os.path.join("D:\\", "Studies", "Learn", "101_ObjectCategories"),
+            "ResizePixelSize": 100,
+            "LoadFromCache": False,
+            "CachePath": os.path.join("D:\\", "Studies", "Learn", "CachedData.pkl")
+        }
+    }
+    return params
+
 
 
 

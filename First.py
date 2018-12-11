@@ -1,45 +1,38 @@
-import skimage.data as skid
 import cv2
 import pylab as plt
-import scipy.misc
-import Params
-import os
-import numpy as Np
+from ProjectParams import getparams
+import numpy as np
 import GetData
+import DataPreper
+import SplitData
+import TrainData
+import TestData
+
+p = getparams()
+
+np.random.seed(0)     # Seed the random number generator
+# p["Data"]["LoadFromCache"] = True
+# p["Kmean"]["LoadFromCache"] = True
+# p["DataProcess"]["LoadFromCache"] = True
 
 
-p = Params
-
-Np.random.seed(0)     # Seed the random number generator
-p.Params.LoadFromCache = False
 folderList = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-GetData.GetData(p, folderList)
+images, labels = GetData.get_data(p['Data'], folderList)
+image_features = DataPreper.data_prepare(p['DataProcess'], images)
+train_x_array, train_y_array, test_x_array, test_y_array = SplitData.split_data_train_test(p['Split'], image_features)
 
+linear_svms = []
+poly_svms = []
+decisions_array = []
+decisions_poly_array = []
 
+for i in range(-5, 15):
+    p["Train"]["C_Value"] = np.float_power(10, i)
+    linear_svm = TrainData.train_data_linear(p['Train'], train_x_array, train_y_array)
+    poly_svms = TrainData.train_data_non_linear(p['Train'], train_x_array, train_y_array)
+    decisions = TestData.test_linear_svm(p['Test'], linear_svm, test_x_array, test_y_array)
+    decisions_poly = TestData.test_poly_svm(p['Test'], poly_svms, test_x_array, test_y_array)
+    linear_svms.append(linear_svm)
+    decisions_array.append(decisions)
+    decisions_poly_array.append(decisions_poly)
 
-
-
-# img = scipy.misc.face()
-# gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-#
-# plt.figure(figsize=(20,10))
-# plt.imshow(img)
-# plt.show()
-#
-# sift = cv2.xfeatures2d.SIFT_create()
-#
-# step_size = 5
-# kp = [cv2.KeyPoint(x, y, step_size) for y in range(0, gray.shape[0], step_size)
-#                                     for x in range(0, gray.shape[1], step_size)]
-#
-# img=cv2.drawKeypoints(gray,kp, img)
-#
-# plt.figure(figsize=(20,10))
-# plt.imshow(img)
-# plt.show()
-#
-# dense_feat = sift.compute(gray, kp)
-#
-# plt.figure(figsize=(20,10))
-# plt.imshow(img)
-# plt.show()
