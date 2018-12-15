@@ -1,0 +1,58 @@
+import time
+import seaborn as sns
+
+data_path = os.path.join(os.getcwd(), "101_ObjectCategories")
+class_indices = np.arange(10, 20)
+
+params = get_default_params()
+
+name, label, data = get_data(params)
+
+fold1_x, fold1_y, fold2_x, fold2_y = split_data(data, label, params)
+
+x_tr, y_tr, x_ts, y_ts = validation_split(fold1_x, fold1_y, params)
+
+tunegrid = expandgrid(
+    {"pixels_per_cell": [(6, 6), (8, 8), (10, 10)],
+     "cells_per_block": [(4, 4), (5, 5), (6, 6)],
+     "C": np.power(np.exp(1), np.linspace(-5, 2, num=15)),
+     "svm_type": ["linear", "poly2"]})
+
+
+start_time = time.time()
+best_clf, scores, tuned_hyperparameters = learn(x_tr, y_tr, x_ts, y_ts, tunegrid)
+print("--- %s tuning time: ---" % (time.time() - start_time))
+print("--- %s validation score ---" % np.max(scores))
+print("--- %s validation score ---" % tuned_hyperparameters)
+
+tuning_results = pd.concat([tunegrid, pd.DataFrame({"score": scores})], axis=1)
+tuning_results["logC"] = np.log(tuning_results.C)
+
+# set optiaml parameter in learner params
+params["pixels_per_cell"] = tuned_hyperparameters.pixels_per_cell
+params["cells_per_block"] = tuned_hyperparameters.cells_per_block
+params["C"] = tuned_hyperparameters.C
+params["svm_type"] = tuned_hyperparameters.svm_type
+
+# test on fold 2
+
+fold2_x_tr, fold2_y_tr, fold2_x_ts, fold2_y_ts = validation_split(fold2_x, fold2_y, params)
+fold2_x_tr_hog, fold2_x_ts_hog = hog_rep(fold2_x_tr, params), hog_rep(fold2_x_ts, params)
+fold2_clf = train(fold2_x_tr_hog, fold2_y_tr, params)
+fold2_score, fold2_pred = test(fold2_clf, fold2_x_ts_hog, fold2_y_ts, params)
+
+# Report
+# hyperparameters tuning
+g = sns.FacetGrid(tuning_results.sort_values(by=["pixels_per_cell", "cells_per_block", "logC"]),
+                  col="pixels_per_cell", row="svm_type", hue="cells_per_block")
+g.map(plt.plot, "logC", "score", alpha=.7)
+g.add_legend()
+g.fig.suptitle('Classifier score for different hyperparameters values')
+
+
+# fold2 results and confusion matrix
+print("--- %s fold2 score ---" % fold2_score)
+cm = skm.confusion_matrix(fold2_y_ts, fold2_pred)
+plt.figure()
+plot_confusion_matrix(cm, classes=np.unique(fold2_y_ts), title='Confusion matrix')
+
